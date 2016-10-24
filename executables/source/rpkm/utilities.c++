@@ -13,18 +13,22 @@ void Options::print_usage(char *arg) {
              << "      : --stats stats_file [OPTIONAL]\n"\
              << "      : --o <outputfile> \n"\
              << "      : --m <multireads>  [OPTIONAL , default on]\n"\
-             << "      : --status [shows status]"\
+             << "      : --status [shows status]\n"\
+             << "      : --count  [shows counts]"\
              << std::endl;
 }
 
 bool Options::SetOptions(int argc, char *argv[]) { 
    for(int i = 1; i < argc ; i++) {   
-       if( strncmp(argv[i], "--c", strlen("--c")) == 0 ) {   
+       if( strncmp(argv[i], "--contigs-file", strlen("--contigs-file")) == 0 ) {   
           this->contigs_file = argv[++i];
        }   
        else if( strncmp(argv[i], "-h", strlen("-h")) == 0 ) {   
           print_usage(argv[0]);
           exit(0);
+       }   
+       else if( strncmp(argv[i], "--read-count", strlen("--read-count")) == 0 ) {   
+          this->read_counts = true;
        }   
        else if( strncmp(argv[i], "--stats", strlen("--stats")) == 0 ) {   
           this->stats_file = argv[++i];

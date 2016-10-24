@@ -5,3 +5,6 @@
 regtests*
 redhat
 rpkm_c
+*.o
+lastdb+
+lastal+

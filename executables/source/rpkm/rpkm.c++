@@ -109,8 +109,12 @@ int main( int argc, char **argv ){
     float total_distinct_reads = static_cast<double>(stats.num_distinct_reads_mapped) + static_cast<double>(stats.num_distinct_reads_unmapped);
     unsigned long orf_length = 0;
     std::cout << "Computing ORF coverage ...";
-    unsigned long _num_orfs = ORFWise_coverage(contigs_dictionary, options.orf_file, _all_orfnames,\
-                               genome_length,  orf_length, total_distinct_reads);
+    unsigned long _num_orfs;
+    _num_orfs = ORFWise_coverage(contigs_dictionary, options.orf_file, _all_orfnames,\
+                               genome_length,  orf_length, total_distinct_reads, options.read_counts, true);
+
+
+
     std::cout << "done\n";
 
  //   std::cout << "done computing orfwise coverage " << std::endl;

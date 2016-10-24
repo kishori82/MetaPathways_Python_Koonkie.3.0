@@ -30,7 +30,7 @@ void substring_coverage(std::map<string, CONTIG> &contigs_dictionary, const std:
 unsigned long ORFWise_coverage( map<string, CONTIG> &contigs_dictionary, const string &orf_file,\
                               map<string, float> &orfnames, unsigned long genome_length,\
                               unsigned long &orf_length,  unsigned long num_mappable_reads,\
-                              bool show_status = false);
+                              bool only_read_count, bool show_status = false);
 
 
 void add_RPKM_value_to_pathway_table(const string &pathways_table, const string &output_file, map<string, float> &orfnames);

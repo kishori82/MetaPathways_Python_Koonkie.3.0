@@ -1092,7 +1092,8 @@ class ContextCreator:
 
 
           '''output'''
-          rpkm_output = s.output_results_rpkm_dir  + PATHDELIM + s.sample_name + ".orf_rpkm.txt"
+          rpkm_output = s.output_results_rpkm_dir  + PATHDELIM + s.sample_name + ".orf_read_counts.txt"
+          biom_output = s.output_results_rpkm_dir  + PATHDELIM + s.sample_name + ".orf_read_counts.biom"
           stats_file = s.output_results_rpkm_dir  + PATHDELIM + s.sample_name + ".orf_rpkm_stats.txt"
 
           samFiles = getSamFiles(rpkm_input, s.sample_name) 
@@ -1121,15 +1122,16 @@ class ContextCreator:
 
           context.outputs = {
                              'rpkm_output': rpkm_output,
+                             'biom_output': biom_output,
                              'stats_file': stats_file
                             }
 
           pyScript = self.configs.METAPATHWAYS_PATH + self.configs.RPKM_CALCULATION
 
-          cmd = "%s -c %s  --rpkmExec %s --rpkmdir %s -O %s -o %s --sample_name %s --stats %s --bwaFolder %s --bwaExec %s"\
+          cmd = "%s -c %s  --rpkmExec %s --rpkmdir %s -O %s -o %s -b %s --sample_name  %s --stats %s --bwaFolder %s --bwaExec %s"\
                 % (pyScript, context.inputs['output_fas'], context.inputs['rpkmExec'],\
                    context.inputs['rpkm_input'], context.inputs['output_gff'],\
-                 context.outputs['rpkm_output'], s.sample_name, context.outputs['stats_file'],\
+                 context.outputs['rpkm_output'], context.outputs['biom_output'],  s.sample_name, context.outputs['stats_file'],\
                  context.inputs['bwaFolder'], context.inputs['bwaExec'])
                 
           context.status = self.params.get('metapaths_steps', 'COMPUTE_RPKM') 

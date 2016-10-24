@@ -329,7 +329,7 @@ void substring_coverage(std::map<string, CONTIG> &contigs_dictionary, const std:
 
 unsigned long ORFWise_coverage( map<string, CONTIG> &contigs_dictionary, const string &orf_file,\
                                map<string, float> &orfnames, unsigned long genome_length,\
-                               unsigned long &orf_length,  unsigned long num_mappable_reads, bool show_status) {
+                               unsigned long &orf_length,  unsigned long num_mappable_reads, bool only_read_counts, bool show_status) {
 
     MATCH  match;
     COVERAGE coverage;
@@ -384,7 +384,11 @@ unsigned long ORFWise_coverage( map<string, CONTIG> &contigs_dictionary, const s
                orf_length += itorf->end - itorf->start;
 //               std::cout << coverage.coverage << "  " << coverage.numreads << "  " << coverage.substring_length << "   " << coverage.uncovered_length << std::endl;
 
-               orfnames[itorf->subject] = (1E9/static_cast<float>(num_mappable_reads))*(static_cast<float>(coverage.numreads)/static_cast<float>(coverage.substring_length));
+                if(only_read_counts==true) {
+                   orfnames[itorf->subject] = static_cast<float>(coverage.numreads);
+                } else {
+                   orfnames[itorf->subject] = (1E9/static_cast<float>(num_mappable_reads))*(static_cast<float>(coverage.numreads)/static_cast<float>(coverage.substring_length));
+                }
               // std::cout << num_mappable_reads << "  " << coverage.numreads << "  " <<  match.subject << "  " << orfnames[match.subject] << std::endl;
            }
 

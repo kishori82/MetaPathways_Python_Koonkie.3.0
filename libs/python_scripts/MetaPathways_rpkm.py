@@ -78,7 +78,10 @@ def createParser():
                            help='the contigs file')
 
     parser.add_option('-o', '--output', dest='output', default=None,
-                           help='orfwise RPKM file')
+                           help='orfwise read count file')
+
+    parser.add_option('-b', '--biomoutput', dest='biomoutput', default=None,
+                           help='orfwise read count file in biomformat')
 
     parser.add_option('--stats', dest='stats', default=None,
                            help='output stats for ORFs  into file')
@@ -250,8 +253,9 @@ def main(argv, errorlogger = None, runcommand = None, runstatslogger = None):
 
 
     # command to build the RPKM
-    command = "%s --c %s"  %(options.rpkmExec, options.contigs)
+    command = "%s --contigs-file %s"  %(options.rpkmExec, options.contigs)
     command += " --multireads " 
+    command += " --read-counts " 
     if options.output:
        command += " --ORF-RPKM %s" %(options.output)
        command += " --stats %s" %(options.stats)
@@ -273,6 +277,12 @@ def main(argv, errorlogger = None, runcommand = None, runstatslogger = None):
        status = 1
        pass
 
+    try:
+       status  = runBIOMCommand(options.output, options.biomoutput) 
+    except:
+       status = 1
+       pass
+
     if status!=0:
        eprintf("ERROR\tRPKM calculation was unsuccessful\n")
        return 255
@@ -286,6 +296,13 @@ def runRPKMCommand(runcommand = None):
 
     result = getstatusoutput(runcommand)
     return result[0]
+
+
+def runBIOMCommand(infile, outfile, biomExec="biom"):
+    commands =  [biomExec,  " convert", "-i", infile, "-o", outfile,  "--table-type=\"Table\"", "--to-json"]
+    result = getstatusoutput(' '.join(commands))
+    return result[0]
+
 
 
 # this is the portion of the code that fixes the name
