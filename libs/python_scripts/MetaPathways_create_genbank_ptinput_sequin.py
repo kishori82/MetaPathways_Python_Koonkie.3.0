@@ -18,7 +18,7 @@ try:
     import re
     from glob import glob
     from libs.python_modules.utils.utils import *
-    from libs.python_modules.utils.metapathways_utils import ShortenORFId
+    from libs.python_modules.utils.metapathways_utils import ShortenORFId,ShortentRNAId
     from libs.python_modules.utils.sysutil import pathDelim, genbankDate, getstatusoutput
     from libs.python_modules.parsers.parse  import parse_parameter_file
 except:
@@ -104,8 +104,7 @@ def insert_orf_into_dict(line, contig_dict):
        contig_dict[fields[0]] = []
 
  #    print attributes
-     if attributes['feature']=='CDS':
-       contig_dict[fields[0]].append(attributes)
+     contig_dict[fields[0]].append(attributes)
 
 
 def get_sequence_name(line): 
@@ -214,9 +213,12 @@ def  write_ptinput_files(output_dir_name, contig_dict, sample_name, nucleotide_s
         for attrib in contig_dict[key]:     
 
            id  =  attrib['id']
-           shortid  =  'O_'+ ShortenORFId(attrib['id'])
-           if "O_"==shortid:
-              print "found", id
+           shortid=""
+           if attrib['feature']=='CDS':
+              shortid  =  'O_'+ ShortenORFId(attrib['id'])
+           if attrib['feature']=='tRNA':
+              shortid  =  'O_'+ ShortentRNAId(attrib['id'])
+
            try:
               protein_seq = protein_seq_dict[id]
            except:

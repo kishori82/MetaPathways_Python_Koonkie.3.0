@@ -964,6 +964,19 @@ def ShortenORFId(_orfname) :
         return ""
     return shortORFname
 
+def ShortentRNAId(_orfname) :
+    ORFIdPATT = re.compile("(\\d+_tRNA)$")
+
+    result =  ORFIdPATT.search(_orfname)
+
+    if result:
+      shortORFname = result.group(1)
+    else:
+        return ""
+    return shortORFname
+
+
+
 
 def ShortenContigId(_contigname) :
     ContigIdPATT = re.compile("(\\d+)$")
