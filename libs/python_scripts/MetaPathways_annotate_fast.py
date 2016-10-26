@@ -388,6 +388,13 @@ def process_rRNA_16S_stats(rRNA_16S_file, rRNA_16S_dictionary):
 
      taxonomy_file.close()
 
+def get_sequence_number(line):
+      seqnamePATT = re.compile(r'[\S]+_(\d+)$')
+      result = seqnamePATT.search(line.strip())
+      if result:
+         return result.group(1)
+      return  line
+
 def process_tRNA_stats(tRNA_stats_file, tRNA_dictionary):
      try:
         tRNA_file = open(tRNA_stats_file, 'r')
@@ -409,7 +416,8 @@ def process_tRNA_stats(tRNA_stats_file, tRNA_dictionary):
             continue
          fields = [ x.strip() for x in line.split('\t') ]
          if len(fields) >=6:
-              tRNA_dictionary[fields[0]] =  [ fields[3], fields[4], fields[5], fields[1] ]
+              name = get_sequence_number(fields[0])
+              tRNA_dictionary[name] =  [ fields[3], fields[4], fields[5], fields[1] ]
 
 # this adds the features and attributes to  be added to the gff file format for the tRNA genes
 def add_tRNA_genes(tRNA_dictionary, tRNA_gff_dictionary, contig_lengths) :

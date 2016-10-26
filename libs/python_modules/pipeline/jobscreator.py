@@ -832,8 +832,10 @@ class ContextCreator:
 
           """PATHOLOGIC_INPUT"""
           ptinput_status = self.params.get('metapaths_steps','ANNOTATE_ORFS')
+
           if ptinput_status in ['redo'] or ( ptinput_status in ['yes'] and not s.hasPToolsInput() ):
               cmd += ' --out-ptinput ' + context.outputs['output_fasta_pf_dir']
+              cmd += ' -n ' + context.inputs_optional['input_nucleotide_fasta']
           context.message = self._Message("PATHOLOGIC INPUT" )
 
           #context.status = self.params.get('metapaths_steps','PATHOLOGIC_INPUT')

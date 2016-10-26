@@ -104,7 +104,8 @@ def insert_orf_into_dict(line, contig_dict):
        contig_dict[fields[0]] = []
 
  #    print attributes
-     contig_dict[fields[0]].append(attributes)
+     if attributes['feature']=='CDS':
+       contig_dict[fields[0]].append(attributes)
 
 
 def get_sequence_name(line): 
@@ -113,6 +114,15 @@ def get_sequence_name(line):
      #print name
      return name
      
+
+def get_sequence_number(line): 
+     fields = re.split(' ', line)
+     name = re.sub('>','',fields[0])
+     seqnamePATT = re.compile(r'[\S]+_(\d+)$')
+     result = seqnamePATT.search(line.strip())
+     return result.group(1)
+
+     #print name
 
 
 note = """GFF File Format
@@ -155,6 +165,8 @@ def process_gff_file(gff_file_name, output_filenames, nucleotide_seq_dict, prote
         line = line.strip() 
         if gff_beg_pattern.search(line):
           continue
+        #print line
+        """  Do not add tRNA """
         insert_orf_into_dict(line, contig_dict)
         #if count%10000 ==0:
         #   print count 
@@ -166,27 +178,20 @@ def process_gff_file(gff_file_name, output_filenames, nucleotide_seq_dict, prote
 
      if "sequin" in output_filenames:
        write_sequin_file(output_filenames['sequin'], contig_dict, sample_name, nucleotide_seq_dict, protein_seq_dict, input_filenames)
-
      if "ptinput" in output_filenames:
        write_ptinput_files(output_filenames['ptinput'], contig_dict, sample_name, nucleotide_seq_dict, protein_seq_dict, compact_output)
 
 # this function creates the pathway tools input files
 def  write_ptinput_files(output_dir_name, contig_dict, sample_name, nucleotide_seq_dict, protein_seq_dict, compact_output):
 
-     useFasta = False
      try:
         #print output_dir_name
         removeDir(output_dir_name)
         #print output_dir_name
         makedirs(output_dir_name)
-        genetic_elementsfile = open(output_dir_name + "/.tmp.genetic-elements.dat", 'w')
+        genetic_elements_file = open(output_dir_name + "/.tmp.genetic-elements.dat", 'w')
 
-        if  useFasta:
-          zerofastafile = open(output_dir_name + "/.tmp.0.fasta", 'w')
-
-        zeropffile = open(output_dir_name + "/tmp.0.pf", 'w')
         reducedpffile = open(output_dir_name + "/tmp.reduced.txt", 'w')
-        organism_paramsfile = open(output_dir_name + "/.tmp.organism-params.dat", 'w')
      except:
         print "cannot create the pathway tools files"
         print "perhaps there is already a folder " + output_dir_name
@@ -194,15 +199,9 @@ def  write_ptinput_files(output_dir_name, contig_dict, sample_name, nucleotide_s
 
      count =0 
      outputStr=""
-     # iterte over every sequence
-     startbase = 0
-     endbase = 0
-     fastaStr =""
-     cumulFastaLength=0
 
+     # iterate over every contig sequence
      first_hits = {}
-     if useFasta:
-        fprintf(zerofastafile, ">0\n")
 
      for key in contig_dict:
         first = True
@@ -213,8 +212,11 @@ def  write_ptinput_files(output_dir_name, contig_dict, sample_name, nucleotide_s
         count+=1
 
         for attrib in contig_dict[key]:     
+
            id  =  attrib['id']
            shortid  =  'O_'+ ShortenORFId(attrib['id'])
+           if "O_"==shortid:
+              print "found", id
            try:
               protein_seq = protein_seq_dict[id]
            except:
@@ -230,71 +232,42 @@ def  write_ptinput_files(output_dir_name, contig_dict, sample_name, nucleotide_s
                if attrib['ec'] :
                  if attrib['ec'] in first_hits[attrib['product']]:
                      fprintf(reducedpffile,"%s\t%s\n", shortid, first_hits[attrib['product']]['n'])
-                     continue 
+
+                    # to  remove redundancy add "continue "
+                    # continue
                  else:    
                      first_hits[attrib['product']]['ec'] =attrib['ec'] 
                      first_hits[attrib['product']]['n'] =shortid 
                else:
                  fprintf(reducedpffile,"%s\t%s\n", shortid, first_hits[attrib['product']]['n'])
-                 continue
+                 # to  remove redundancy add "continue "
+                 #continue
            else: 
                 first_hits[attrib['product']] = {}
                 first_hits[attrib['product']]['n'] =shortid
                 first_hits[attrib['product']]['ec'] =attrib['ec']
 
+           # create the pf file
+           write_to_pf_file(output_dir_name, shortid, attrib)
 
-           startbase = cumulFastaLength + attrib['start']
-           endbase =  cumulFastaLength + attrib['end']
+           # append to the gen elements file
+           append_genetic_elements_file(genetic_elements_file, output_dir_name, shortid)
+        #endfor
 
-           try: 
-              fprintf(zeropffile, "ID\t%s\n", shortid)
-              fprintf(zeropffile, "NAME\t%s\n", shortid)
-              fprintf(zeropffile, "STARTBASE\t%s\n", startbase)
-              fprintf(zeropffile, "ENDBASE\t%s\n", endbase)
-           except:
-              pass
 
-           try: 
-              fprintf(zeropffile, "PRODUCT\t%s\n", attrib['product'])
-           except:
-              fprintf(zeropffile, "PRODUCT\t%s \n", 'hypothetical protein')
+        #write the sequence now only once per contig
+        try:
+           contig_seq =  nucleotide_seq_dict[key]
+        except:
+           printf("ERROR: Contig %s missing file in \"preprocessed\" folder for sample\n", key)
+           continue
 
-           fprintf(zeropffile, "PRODUCT-TYPE\tP\n")
-           try:
-             if  len(attrib['ec']) > 0:
-                fprintf(zeropffile, "EC\t%s\n", attrib['ec'])
-           except: 
-                pass
- #             print attrib
- #             sys.exit(0)
+        fastaStr=wrap("",0,62, contig_seq)
 
-           fprintf(zeropffile, "//\n")
+           #write_ptools_input_files(genetic_elements_file, output_dir_name, shortid, fastaStr)
+        write_input_sequence_file(output_dir_name, shortid, fastaStr)
+     #endif 
 
-        if useFasta:
-           try:
-              dna_seq =  nucleotide_seq_dict[key]
-              dna_seq += 'NNNNNNNNNN'
-           except:
-              print "Key missing for " + key
-              continue
-
-           fastaStr+=(wrap("",0,62, dna_seq)+'\n')
-
-           cumulFastaLength += len(dna_seq)
-
-           fprintf(zerofastafile, "%s",  fastaStr)
-           fastaStr=""
-        else:
-           cumulFastaLength += 10
-
-     if useFasta:
-        zerofastafile.close()
-
-     zeropffile.close()
-     if useFasta:
-       rename(output_dir_name + "/.tmp.0.fasta", output_dir_name + "/0.fasta")
-
-     rename(output_dir_name + "/tmp.0.pf", output_dir_name + "/0.pf")
      rename(output_dir_name + "/tmp.reduced.txt",output_dir_name + "/reduced.txt")
 
      # Niels: removing annotated.gff from sample_name
@@ -311,25 +284,64 @@ def  write_ptinput_files(output_dir_name, contig_dict, sample_name, nucleotide_s
      if not sample_name[0].isalpha() :
         sample_name = 'E' + sample_name
 
-     fprintf(organism_paramsfile,"ID\t%s\n",sample_name)
-     fprintf(organism_paramsfile,"STORAGE\tFILE\n")
-     fprintf(organism_paramsfile,"NAME\t%s\n",sample_name)
-     fprintf(organism_paramsfile,"ABBREV-NAME\t%s\n",sample_name)
-     fprintf(organism_paramsfile,"STRAIN\t1\n")
-     fprintf(organism_paramsfile,"RANK\t|species|\n")
-     fprintf(organism_paramsfile,"NCBI-TAXON-ID\t12908\n")
-     organism_paramsfile.close()
-     rename(output_dir_name + "/.tmp.organism-params.dat", output_dir_name + "/organism-params.dat")
+     write_organisms_dat_file(output_dir_name, sample_name)
 
-     fprintf(genetic_elementsfile,"ID\t0\n")
-     fprintf(genetic_elementsfile,"NAME\t0\n")
-     fprintf(genetic_elementsfile,"TYPE\t:READ/CONTIG\n")
-     fprintf(genetic_elementsfile,"ANNOT-FILE\t0.pf\n")
-     if useFasta:
-       fprintf(genetic_elementsfile,"SEQ-FILE\t0.fasta\n")
-     fprintf(genetic_elementsfile,"//")
-     genetic_elementsfile.close()
+     genetic_elements_file.close()
      rename(output_dir_name + "/.tmp.genetic-elements.dat", output_dir_name + "/genetic-elements.dat")
+
+def write_to_pf_file(output_dir_name, shortid, attrib):
+    if "O_"==shortid:
+       print "found"
+    pfFile = open(output_dir_name + "/" + shortid + ".pf", 'w')
+    try: 
+       fprintf(pfFile, "ID\t%s\n", shortid)
+       fprintf(pfFile, "NAME\t%s\n", shortid)
+       fprintf(pfFile, "STARTBASE\t%s\n", attrib['start'])
+       fprintf(pfFile, "ENDBASE\t%s\n", attrib['end'])
+    except:
+       pass
+
+    try: 
+       fprintf(pfFile, "FUNCTION\t%s\n", attrib['product'])
+    except:
+       fprintf(pfFile, "FUNCTION\t%s \n", 'hypothetical protein')
+
+    fprintf(pfFile, "PRODUCT-TYPE\tP\n")
+    try:
+      if  len(attrib['ec']) > 0:
+         fprintf(pfFile, "EC\t%s\n", attrib['ec'])
+    except: 
+         pass
+    fprintf(pfFile, "//\n")
+    pfFile.close()
+
+
+def write_input_sequence_file(output_dir_name, shortid, contig_sequence):
+
+    seqfile = open(output_dir_name + "/" + shortid + ".fasta", 'w')
+    fprintf(seqfile, ">%s\n%s",shortid, contig_sequence);
+    seqfile.close()
+
+def append_genetic_elements_file(genetic_elementsfile, output_dir_name, shortid):
+    fprintf(genetic_elementsfile,"ID\t%s\n", shortid)
+    fprintf(genetic_elementsfile,"NAME\t%s\n", shortid)
+    fprintf(genetic_elementsfile,"TYPE\t:READ/CONTIG\n")
+    fprintf(genetic_elementsfile,"ANNOT-FILE\t%s.pf\n", shortid)
+    fprintf(genetic_elementsfile,"SEQ-FILE\t%s.fasta\n", shortid)
+    fprintf(genetic_elementsfile,"//\n")
+
+
+def write_organisms_dat_file(output_dir_name, sample_name):
+    organism_paramsfile = open(output_dir_name + "/organism-params.dat", 'w')
+    fprintf(organism_paramsfile,"ID\t%s\n",sample_name)
+    fprintf(organism_paramsfile,"STORAGE\tFILE\n")
+    fprintf(organism_paramsfile,"NAME\t%s\n",sample_name)
+    fprintf(organism_paramsfile,"ABBREV-NAME\t%s\n",sample_name)
+    fprintf(organism_paramsfile,"STRAIN\t1\n")
+    fprintf(organism_paramsfile,"RANK\t|species|\n")
+    fprintf(organism_paramsfile,"NCBI-TAXON-ID\t12908\n")
+    organism_paramsfile.close()
+ 
 
 def get_parameter(config_params, category, field, default = None):
      if config_params == None:
@@ -655,7 +667,7 @@ def process_sequence_file(sequence_file_name,  seq_dictionary):
              sequence=''.join(fragments)
              seq_dictionary[name]=sequence
              fragments = []
-          name=get_sequence_name(line)
+          name=get_sequence_number(line)
         else:
           fragments.append(line)
 
