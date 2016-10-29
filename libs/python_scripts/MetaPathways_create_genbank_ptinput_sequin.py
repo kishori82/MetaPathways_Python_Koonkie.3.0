@@ -164,7 +164,6 @@ def process_gff_file(gff_file_name, output_filenames, nucleotide_seq_dict, prote
         line = line.strip() 
         if gff_beg_pattern.search(line):
           continue
-        #print line
         """  Do not add tRNA """
         insert_orf_into_dict(line, contig_dict)
         #if count%10000 ==0:
@@ -175,8 +174,6 @@ def process_gff_file(gff_file_name, output_filenames, nucleotide_seq_dict, prote
      if "gbk" in output_filenames:
        write_gbk_file(output_filenames['gbk'], contig_dict, sample_name, nucleotide_seq_dict, protein_seq_dict)
 
-     if "sequin" in output_filenames:
-       write_sequin_file(output_filenames['sequin'], contig_dict, sample_name, nucleotide_seq_dict, protein_seq_dict, input_filenames)
      if "ptinput" in output_filenames:
        write_ptinput_files(output_filenames['ptinput'], contig_dict, sample_name, nucleotide_seq_dict, protein_seq_dict, compact_output)
 
@@ -303,19 +300,71 @@ def write_to_pf_file(output_dir_name, shortid, attrib):
     except:
        pass
 
+    ec_nos = {}
     try: 
-       fprintf(pfFile, "FUNCTION\t%s\n", attrib['product'])
+       prod_attributes = create_product_attributes(attrib['product'])
+
+       if len(prod_attributes)>=5:
+         for i in range(0, len(prod_attributes)):
+            if i==0:
+              fprintf(pfFile, "FUNCTION\t%s\n", prod_attributes[i])
+
+            if i==1:
+              fprintf(pfFile, "DBLINK\tSP:%s\n", prod_attributes[i])
+            #  printf("DBLINK\tSP:%s\n", prod_attributes[0])
+   
+            if i == 2:
+              fprintf(pfFile, "DBLINK\tMetaCyc:%s\n", prod_attributes[i])
+            #  printf("DBLINK\tMetaCyc:%s\n", prod_attributes[1])
+   
+            if i >= 4:
+              if not prod_attributes[i] in ec_nos:
+                 fprintf(pfFile, "EC\t%s\n", prod_attributes[i])
+                 ec_nos[prod_attributes[i]] = True
+       else:
+         fprintf(pfFile, "FUNCTION\t%s\n", attrib['product'])
+            #  printf("EC\t%s\n", prod_attributes[3])
     except:
        fprintf(pfFile, "FUNCTION\t%s \n", 'hypothetical protein')
 
-    fprintf(pfFile, "PRODUCT-TYPE\tP\n")
+    if attrib['feature']=='CDS':
+       fprintf(pfFile, "PRODUCT-TYPE\tP\n")
+
+    if attrib['feature']=='tRNA':
+       fprintf(pfFile, "PRODUCT-TYPE\tTRNA\n")
+
     try:
       if  len(attrib['ec']) > 0:
-         fprintf(pfFile, "EC\t%s\n", attrib['ec'])
+        if not attrib['ec'] in ec_nos:
+          fprintf(pfFile, "EC\t%s\n", attrib['ec'])
     except: 
          pass
     fprintf(pfFile, "//\n")
     pfFile.close()
+
+
+def  create_product_attributes(product) :
+     _result = re.search(r'#\sUNIPROT', product)
+     products = []
+
+     if _result:
+       fields = product.split("#")
+       products = [ fields[0]]
+       _f = False
+       for _field in fields:
+          field = _field.strip()
+          if _f==True:
+            products.append(field)
+             
+          if field=='UNIPROT':
+            _f = True
+     else:
+        products = [ product]
+
+     return products
+    
+
+
 
 
 def write_input_sequence_file(output_dir_name, shortid, contig_sequence):
@@ -358,139 +407,6 @@ def get_parameter(config_params, category, field, default = None):
         else:
              return default
      return default
-
-#this function creates the sequin  file from the gff, protein and nucleotide sequences  
-def  write_sequin_file(tbl_file_name, contig_dict, sample_name, nucleotide_seq_dict, protein_seq_dict, sequin_input_files):
-      
-
-     sequin_src_filename = re.sub(r'tbl$', 'src', tbl_file_name)
-     sequin_output_fasta = re.sub(r'tbl$', 'fasta', tbl_file_name)
-     sequin_output_sbt = re.sub(r'tbl$', 'sbt', tbl_file_name)
-
-     shutil.copy(sequin_input_files['sequin_fasta'], sequin_output_fasta)
-     shutil.copy(sequin_input_files['sequin_sbt_file'], sequin_output_sbt)
-     sequin_required_files = { 'fasta': sequin_output_fasta, 'tbl': tbl_file_name, 'src': sequin_src_filename, 'tbl2asn': sequin_input_files['sequin_tbl2asn'], 'sbt': sequin_output_sbt }
-
-     outputfile = open(tbl_file_name, 'w')
-     #print contig_dict
-    
-     count =0 
-     outputStr=""
-     for key in contig_dict:
-        first = True
-        if count %10000 == 0:
-           #print "count " + str(count)
-           outputfile.write(outputStr)
-           outputStr=""
-        count+=1
-
-        for attrib in contig_dict[key]:     
-           id  = attrib['id']
-           try:
-              protein_seq = protein_seq_dict[id]
-           except:
-              protein_seq = ""
-              None
-           
-           definition = sample_name
-           accession = '.'
-           version = '.' +spaces(10) + "GI:."
-           dblink = sample_name
-           keywords = '.'
-           source = sample_name
-           organism = sample_name
-           if first:   
-              first = False
-              try:
-                dna_seq =  nucleotide_seq_dict[key]
-                dna_seq_formatted =  format_sequence_origin(dna_seq)
-                dna_length = len(dna_seq)
-                sourceStr = "1.." + str(dna_length)
-              except:
-                dna_seq = ""
-                dna_seq_formatted =  ""
-                dna_length = 0
-                sourceStr ="0..0"
-
-              outputStr+=(">Feature %s\n" % (key))
-              outputStr+=re.sub('\.\.','\t',sourceStr)+'\t'+"REFERENCE" + '\n'
-            
-           startPrefix = ''
-           endPrefix = ''
-           if 'partial' in attrib:
-               if attrib['partial']=='10':
-                 startPrefix = '<'
-               if attrib['partial']=='01':
-                 endPrefix = '>'
-               if attrib['partial']=='11':
-                 startPrefix = '<'
-                 endPrefix = '>'
-
-
-           if 'start' in attrib and 'end' in attrib:
-              if 'strand' in attrib:
-                 if attrib['strand']=='-':
-                     geneLoc = str(attrib['end']) + endPrefix +'\t' + startPrefix +  str(attrib['start'])
-                 else:
-                     geneLoc = startPrefix + str(attrib['start']) +'\t' + str(attrib['end']) + endPrefix
-              outputStr+=geneLoc + '\t' + "gene" + '\n'
- 
-
-           if 'locus_tag' in attrib:
-               locus_tag = "gene" + '\t' + attrib['locus_tag'] 
-               outputStr+='\t\t\t' + locus_tag +'\n'
-
-
-           outputStr+=geneLoc + '\t' + "CDS" + '\n'
-
-           if 'product' in attrib:
-              product_tag = "product" + '\t' + attrib['product'] 
-              outputStr+='\t\t\t' + product_tag +'\n'
-
-     outputfile.write(outputStr)
-     outputfile.close() 
-
-     outputsrcfile = open(sequin_src_filename, 'w')
-     ncbi_sequin_params = parse_parameter_file(sequin_input_files['sequin_params'])
-       
-     headers =  ['Collection_date', 'Country', 'isolation_source',  'Lat_Lon', 'Organism', 'environmental_sample']
-     
-     header_values = {}
-     headerStr = 'Sequence_ID'
-     for header_name in headers:
-        headerStr += '\t' + header_name
-        header_values[header_name]= get_parameter(ncbi_sequin_params, 'SequinHeader', header_name, default='__'+ header_name + '__')
-
-    
-     valueStr =""
-     for header_name in headers:
-         valueStr += "\t" + header_values[header_name]
-
-     fprintf(outputsrcfile, "%s\n", key + headerStr)
-     for key in contig_dict:
-        fprintf(outputsrcfile, "%s\n", key + valueStr)
-     outputsrcfile.close()
-
-     # Now open a pipe process and run the tbl2asn script on the sequin input
-       
-     for file in sequin_required_files:
-        if not path.exists(sequin_required_files[file]):
-           print "Could not find file : " + sequin_required_files[file]
-           print "Make sure all of the following files are present :"
-           for file in sequin_required_files:
-                print file
-           sys.exit(0)
-
-     args = [ sequin_required_files['tbl2asn'], '-t', sequin_required_files['sbt'] , '-i', sequin_required_files['fasta'], '-a', 's', '-V', 'v']  
-     command = ' '.join(args)
-     result = getstatusoutput(command)
-     if result[0] == 0 :
-         print "Successfully created the SEQUIN file"
-       
-     
-     #print contig_dict
-
-
 
 
 #this function creates the genbank file from the gff, protein and nucleotide sequences  

@@ -498,11 +498,11 @@ def create_annotation(dbname_weight, results_dictionary, input_gff,  rRNA_16S_st
          output_comp_annot_file2_Str = ''
          for dbname in dbnames:
             weight = dbname_weight[dbname]
-            value = 0
             orf_id = orf['id']
             if orf_id in results_dictionary[dbname]:
                 if value < results_dictionary[dbname][orf_id]['value']:
                     value = results_dictionary[dbname][orf_id]['value']
+    #                print value, dbname
                     candidatedbname=dbname
                     success =True
                     candidate_orf_pos = count 
@@ -539,6 +539,7 @@ def create_annotation(dbname_weight, results_dictionary, input_gff,  rRNA_16S_st
                 else:
                    output_comp_annot_file2_Str += '{0}\t{1}\t{2}\t{3}'.format(orf_id, '','','','')
 
+         # end of for all dbname
          
          if success:  # there was a database hit
             fprintf(output_comp_annot_file1,'%s\n', output_comp_annot_file1_Str)
@@ -623,10 +624,8 @@ def process_product(product, database, similarity_threshold=0.9):
 
             if kegg_product.strip():
                 processed_product=kegg_product.strip()
-                
 
     # RefSeq: split and process
-
     elif database == 'refseq':
         for subproduct in product.split('; '):
             subproduct = re.sub(r'[a-z]{2,}\|(.+?)\|\S*', '', subproduct)
@@ -641,6 +640,10 @@ def process_product(product, database, similarity_threshold=0.9):
         product_name = product.split('#')[0].strip()
         product_name = re.sub(r'^[^ ]* ', '', product_name)
         product_name = re.sub(r' OS=.*', '', product_name)
+
+        print "====", product
+        print "====", product_name
+        print ""
         if product_name:
             processed_product=product_name
 
@@ -661,12 +664,12 @@ def process_product(product, database, similarity_threshold=0.9):
             subproduct = re.sub(r'\(.+?\)', '', subproduct)
             if subproduct.strip():
                 processed_product=subproduct.strip()
-                print processed_product
 
     # MetaCyc: split and process
 
     # Generic
     else:
+
         processed_product=strip_taxonomy(product)
 
     words = [ x.strip() for x in processed_product.split() ]
@@ -676,8 +679,7 @@ def process_product(product, database, similarity_threshold=0.9):
     for word in words:
        if not  underscore_pattern.search(word) and not arrow_pattern.search(word):
            filtered_words.append(word)
-    
-
+           
     #processed_product = ' '.join(filtered_words)
     # Chop out hypotheticals
     processed_product = remove_repeats(filtered_words)
@@ -685,7 +687,7 @@ def process_product(product, database, similarity_threshold=0.9):
 
     # can actually be a proper annotation
     # processed_product = re.sub(r'hypothetical protein','', processed_product)
-
+       
     return processed_product
 
 def remove_repeats(filtered_words):
@@ -694,8 +696,10 @@ def remove_repeats(filtered_words):
     for word in filtered_words:
        if not word in word_dict:
           if not word in ['', 'is', 'have', 'has', 'will', 'can', 'should',  'in', 'at', 'upon', 'the', 'a', 'an', 'on', 'for', 'of', 'by', 'with' ,'and',  '>' ]:
-             word_dict[word]=1
-             newlist.append(word)
+            if not word=='#':   # for metacyc this is important
+                word_dict[word]=1
+
+            newlist.append(word)
     return ' '.join(newlist)
 
 
@@ -745,6 +749,9 @@ class BlastOutputTsvParser(object):
               self.data['identity'] = float(fields[self.fieldmap['identity']])
               self.data['ec'] = fields[self.fieldmap['ec']]
               self.data['product'] = re.sub(r'=',' ',fields[self.fieldmap['product']])
+
+
+
               self.i = self.i + 1
               return self.data
            except:
@@ -870,7 +877,11 @@ def getBlastFileNames(opts) :
             dbname = result.group(1)
             database_names.append(dbname)
             parsed_blastouts.append(blastoutname)
-            weight_dbs.append(1)
+
+            if re.search(r'metacyc', blastoutname, re.I):
+               weight_dbs.append(2)
+            else:
+               weight_dbs.append(1)
 
     return database_names, parsed_blastouts, weight_dbs
 
@@ -908,7 +919,7 @@ def main(argv, errorlogger =None, runstatslogger = None):
     for dbname, blastoutput, weight in zip(database_names, input_blastouts, weight_dbs): 
         results_dictionary[dbname]={}
         dbname_weight[dbname] = weight
-        count = process_parsed_blastoutput( dbname, weight, blastoutput, opts, results_dictionary[dbname])
+        count = process_parsed_blastoutput(dbname, weight, blastoutput, opts, results_dictionary[dbname])
         if runstatslogger!=None:
            runstatslogger.write("%s\tProtein Annotations from %s\t%s\n" %( str(priority), dbname, str(count)))
         count_annotations 
