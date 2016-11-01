@@ -21,6 +21,7 @@ After the repositpry in cloned, navigate into MetaPathways_Python_Koonkie.3.0/ex
 it is also possible to:
 * make clean_folders
 * make tar_folders
+Depending on the OS you are using:
 * make remove_macosx
 * make remove_redhat
 * make remove_ubuntu
