@@ -12,18 +12,18 @@ In addtion MetaPathways uses several third party softwares all of which are dist
 
 After the repositpry in cloned, navigate into MetaPathways_Python_Koonkie.3.0/executables/source In this folder you will see a Makefile. The following are options:
 
-make untar_folder
-make build_folders
-make install_macosx
-make install_redhat
-make install_ubuntu
+* make untar_folder
+* make build_folders
+* make install_macosx
+* make install_redhat
+* make install_ubuntu
 
 it is also possible to:
-make clean_folders
-make tar_folders
-make remove_macosx
-make remove_redhat
-make remove_ubuntu
+* make clean_folders
+* make tar_folders
+* make remove_macosx
+* make remove_redhat
+* make remove_ubuntu
 
 Please see the [MetaPathways v2.5 wiki](https://github.com/hallamlab/metapathways2/wiki) for more details on running the software.
 
